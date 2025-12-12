@@ -1,12 +1,15 @@
 package ru.javaops.cloudjava.menuservice.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Type;
+import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.proxy.HibernateProxy;
+import org.springframework.format.annotation.DateTimeFormat;
+import ru.javaops.cloudjava.menuservice.util.DateUtil;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -17,13 +20,11 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Getter
 @Setter
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class MenuItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    @EqualsAndHashCode.Include
     private Long id;
 
     @Column(name = "name", nullable = false)
@@ -61,10 +62,27 @@ public class MenuItem {
 
     @Column(name = "created_at")
     @CreationTimestamp
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @DateTimeFormat(pattern = DateUtil.DATE_FORMAT)
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @UpdateTimestamp
+    @DateTimeFormat(pattern = DateUtil.DATE_FORMAT)
     private LocalDateTime updatedAt;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getEffectiveClass(this) != getEffectiveClass(o)) return false;
+        return getId() != null && getId().equals(((MenuItem) o).getId());
+    }
+
+    @Override
+    public final int hashCode() {
+        return getEffectiveClass(this).hashCode();
+    }
+
+    private static Class<?> getEffectiveClass(Object o) {
+        return o instanceof HibernateProxy ? ((HibernateProxy) o).getHibernateLazyInitializer().getPersistentClass() : o.getClass();
+    }
 }
