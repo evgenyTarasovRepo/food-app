@@ -14,6 +14,7 @@ import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.jdbc.SqlGroup;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import ru.javaops.cloudjava.menuservice.BaseTest;
 import ru.javaops.cloudjava.menuservice.dto.SortBy;
 import ru.javaops.cloudjava.menuservice.model.Category;
 import ru.javaops.cloudjava.menuservice.model.MenuItem;
@@ -44,7 +45,7 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
                 executionPhase = Sql.ExecutionPhase.AFTER_TEST_METHOD
         )
 })
-class MenuItemRepositoryImplTest {
+class MenuItemRepositoryImplTest extends BaseTest {
     @Autowired
     private MenuItemRepository menuItemRepository;
     @Autowired
@@ -166,43 +167,5 @@ class MenuItemRepositoryImplTest {
         var drinks = menuItemRepository.getMenusFor(Category.DRINKS, SortBy.DATE_DESC);
         assertThat(drinks).hasSize(3);
         assertElementsInOrder(drinks, MenuItem::getName, List.of("Tea", "Wine", "Cappuccino"));
-    }
-
-    private Long getIdByName(String name) {
-        return em.createQuery("select m.id from MenuItem m where m.name= ?1", Long.class)
-                .setParameter(1, name)
-                .getSingleResult();
-    }
-
-    private <T, R> void assertFieldsEquality(T item, R dto, String... fields) {
-        assertFieldsExistence(item, dto, fields);
-        assertThat(item).usingRecursiveComparison()
-                .comparingOnlyFields(fields)
-                .isEqualTo(dto);
-    }
-
-    private <T, R> void assertElementsInOrder(List<T> items, Function<T, R> mapper, List<R> expectedElements) {
-        var actualNames = items.stream().map(mapper).toList();
-        assertThat(actualNames).containsExactlyElementsOf(expectedElements);
-    }
-
-    private <T, R> void assertFieldsExistence(T item, R dto, String... fields) {
-        boolean itemFieldsMissing = Arrays.stream(fields)
-                .anyMatch(field -> getField(item, field) == null);
-        boolean dtoFieldsMissing = Arrays.stream(fields)
-                .anyMatch(field -> getField(dto, field) == null);
-
-        if (itemFieldsMissing || dtoFieldsMissing) {
-            throw new AssertionError("One or more fields do not exist in the provided objects. Actual: %s. Expected: %s. Fields to compare: %s"
-                    .formatted(item, dto, List.of(fields)));
-        }
-    }
-
-    private <T> Field getField(T item, String fieldName) {
-        try {
-            return item.getClass().getDeclaredField(fieldName);
-        } catch (NoSuchFieldException e) {
-            return null;
-        }
     }
 }
