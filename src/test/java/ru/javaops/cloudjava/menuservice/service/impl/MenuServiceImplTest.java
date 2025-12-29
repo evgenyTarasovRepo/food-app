@@ -54,8 +54,11 @@ public class MenuServiceImplTest extends BaseTest {
         var menuItem = menuService.getMenu(id);
 
         assertThat(menuItem).isNotNull();
+        assertThat(menuItem.getId()).isNotNull();
         assertThat(id).isEqualTo(menuItem.getId());
         assertThat(menuItem.getName()).isEqualTo("Cappuccino");
+        assertThat(menuItem.getCreatedAt()).isNotNull();
+        assertThat(menuItem.getUpdatedAt()).isNotNull();
     }
 
     @Test
@@ -68,11 +71,10 @@ public class MenuServiceImplTest extends BaseTest {
 
     @Test
     void deleteMenuItem_byId() {
-        var id = 1L;
+        var id = getIdByName("Cappuccino");
         menuService.deleteMenuItem(id);
-
-        assertThatThrownBy(() -> menuService.getMenu(id))
-                .isInstanceOf(MenuServiceException.class);
+        var deletedOpt = repository.findById(id);
+        assertThat(deletedOpt).isEmpty();
     }
 
     @Test
@@ -92,12 +94,7 @@ public class MenuServiceImplTest extends BaseTest {
 
         MenuItemDto updated = menuService.updateMenuItem(id, dto);
 
-        assertThat(updated.getId()).isEqualTo(id);
-        assertThat(updated.getName()).isEqualTo(dto.getName());
-        assertThat(updated.getPrice()).isEqualByComparingTo(dto.getPrice());
-        assertThat(updated.getImageUrl()).isEqualTo(dto.getImageUrl());
-        assertThat(updated.getTimeToCook()).isEqualTo(dto.getTimeToCook());
-        assertThat(updated.getDescription()).isEqualTo(dto.getDescription());
+        assertFieldsEquality(updated, updated, "name", "description", "price", "timeToCook", "imageUrl");
     }
 
     @Test
@@ -111,8 +108,8 @@ public class MenuServiceImplTest extends BaseTest {
 
     @Test
     void updateMenuItem_throws_whenNewNameIsNotUnique() {
-        var id = 1L;
-        var dto = TestData.updateMenuBuilder("Cappuccino", 65.50, 7000L, "Super", "http://images.com/cappuccino-3.png");
+        var id = getIdByName("Cappuccino");
+        var dto = TestData.updateMenuBuilder("Wine", 65.50, 7000L, "Super", "http://images.com/wine.png");
 
         assertThatThrownBy(() -> menuService.updateMenuItem(id, dto))
                 .isInstanceOf(MenuServiceException.class);
