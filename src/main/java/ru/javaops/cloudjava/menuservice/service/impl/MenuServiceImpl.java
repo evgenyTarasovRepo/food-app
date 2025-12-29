@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import ru.javaops.cloudjava.menuservice.dto.CreateMenuRequest;
 import ru.javaops.cloudjava.menuservice.dto.MenuItemDto;
 import ru.javaops.cloudjava.menuservice.dto.SortBy;
@@ -20,18 +21,17 @@ import java.util.List;
 @AllArgsConstructor
 public class MenuServiceImpl implements MenuService {
 
-    public static final String MENU_ITEM_NOT_FOUND = "Menu item with id %d not found";
-    public static final String MENU_ITEM_ALREADY_EXISTS = "Menu item with this name already exists";
     private final MenuItemRepository menuItemRepository;
     private final MenuItemMapper menuItemMapper;
 
     @Override
     public MenuItemDto createMenuItem(CreateMenuRequest dto) {
+        var menuItem = menuItemMapper.toDomain(dto);
         try {
-            var savedDomain = menuItemRepository.save(menuItemMapper.toDomain(dto));
-            return menuItemMapper.toDto(savedDomain);
+            return menuItemMapper.toDto(menuItemRepository.save(menuItem));
         } catch (DataIntegrityViolationException e) {
-            throw new MenuServiceException(MENU_ITEM_ALREADY_EXISTS, HttpStatus.CONFLICT);
+            var msg = String.format("Failed to create MenuItem: %s. Reason: Item with name %s already exists.", dto, dto.getName());
+            throw new MenuServiceException(msg, HttpStatus.CONFLICT);
         }
     }
 
@@ -45,23 +45,24 @@ public class MenuServiceImpl implements MenuService {
         try {
             var updated = menuItemRepository.updateMenu(id, update);
             if (updated == 0) {
-                throw new MenuServiceException(MENU_ITEM_NOT_FOUND.formatted(id), HttpStatus.NOT_FOUND);
+                var msg = String.format("MenuItem with id=%d not found.", id);
+                throw new MenuServiceException(msg.formatted(id), HttpStatus.NOT_FOUND);
             }
+            return getMenu(id);
         } catch (DataIntegrityViolationException e) {
-            throw new MenuServiceException(MENU_ITEM_ALREADY_EXISTS, HttpStatus.CONFLICT);
+            var msg = String.format("Failed to update MenuItem with ID: %d. Reason: Item with name %s already exists.",
+                    id, update.getName());
+            throw new MenuServiceException(msg, HttpStatus.CONFLICT);
         }
-
-        return menuItemRepository.findById(id)
-                .map(menuItemMapper::toDto)
-                .orElseThrow(() -> new MenuServiceException(MENU_ITEM_NOT_FOUND, HttpStatus.NOT_FOUND));
     }
 
     @Override
     public MenuItemDto getMenu(Long id) {
-        var domain = menuItemRepository
-                .findById(id).orElseThrow(
-                        () -> new MenuServiceException(MENU_ITEM_NOT_FOUND.formatted(id), HttpStatus.NOT_FOUND));
-        return menuItemMapper.toDto(domain);
+        return menuItemRepository
+                .findById(id)
+                .map(menuItemMapper::toDto)
+                .orElseThrow(
+                        () -> new MenuServiceException(String.format("MenuItem with id=%d not found.", id), HttpStatus.NOT_FOUND));
     }
 
     @Override
