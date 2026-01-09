@@ -135,7 +135,7 @@ public class MenuItemController {
                     )
             )
     })
-    @GetMapping("/v1/menu-items")
+    @GetMapping()
     public List<MenuItemDto> getMenuItems(
             @RequestParam("category") @NotBlank(message = "Категория не должна быть пустой.") String category,
             @RequestParam(value = "sort", defaultValue = "az") @NotBlank(message = "Параметр сортировки не должен быть пустым.") String sort) {
